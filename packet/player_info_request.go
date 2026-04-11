@@ -1,0 +1,21 @@
+package packet
+
+import (
+	"github.com/google/uuid"
+	"github.com/sandertv/gophertunnel/minecraft/protocol"
+)
+
+// PlayerInfoRequest is sent by the client to request information about a player.
+type PlayerInfoRequest struct {
+	PlayerUUID uuid.UUID
+}
+
+func (*PlayerInfoRequest) ID() uint16 { return IDPlayerInfoRequest }
+
+func (pk *PlayerInfoRequest) Marshal(w *protocol.Writer) {
+	w.UUID(&pk.PlayerUUID)
+}
+
+func (pk *PlayerInfoRequest) Unmarshal(r *protocol.Reader) {
+	r.UUID(&pk.PlayerUUID)
+}
