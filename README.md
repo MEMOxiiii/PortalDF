@@ -2,7 +2,7 @@
 
 A Go library for connecting [Dragonfly](https://github.com/df-mc/dragonfly) servers to the [Portal](https://github.com/paroxity/portal) proxy via its socket communication protocol.
 
-This is the Dragonfly equivalent of [PortalPM](https://github.com/paroxity/portal-pm) for PocketMine-MP.
+This is the Dragonfly equivalent of [PortalPM](https://github.com/MEMOxiiii/PortalPM) for PocketMine-MP.
 
 ## Features
 
@@ -14,23 +14,31 @@ This is the Dragonfly equivalent of [PortalPM](https://github.com/paroxity/porta
 - Find which server a player is on
 - Receive player latency updates from the proxy
 - Automatic reconnection on disconnect
+- **Built-in dragonfly commands**: `/transfer`, `/server`, `/servers`
 
-## Usage
+## Installation
+
+```
+go get github.com/hexomc/portaldf
+```
+
+## Quick Start
 
 ```go
 package main
 
 import (
 	"log/slog"
-	"os"
 
-	"github.com/google/uuid"
+	"github.com/df-mc/dragonfly/server"
 	"github.com/hexomc/portaldf"
-	"github.com/hexomc/portaldf/packet"
+	portalcmd "github.com/hexomc/portaldf/command"
 )
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	// ... set up dragonfly server config ...
+	srv := conf.New()
+	srv.CloseOnProgramEnd()
 
 	portal := portaldf.New(portaldf.Config{
 		ProxyAddress:  "127.0.0.1",
@@ -38,37 +46,79 @@ func main() {
 		Secret:        "your-secret",
 		ServerName:    "Hub1",
 		ServerAddress: "127.0.0.1:19132",
-	}, log)
+	}, slog.Default())
 
-	// Start connection in a goroutine (it blocks and auto-reconnects).
 	go portal.Connect()
 
-	// Transfer a player to another server.
-	portal.TransferPlayer(playerUUID, "SkyWars1", func(uid uuid.UUID, status byte, err string) {
-		if status == packet.TransferResponseSuccess {
-			log.Info("Player transferred successfully")
-		}
-	})
+	// Register /transfer, /server, /servers commands.
+	portalcmd.Register(portal, srv)
 
-	// Get a list of all servers.
-	portal.RequestServerList(func(servers []packet.ServerEntry) {
-		for _, s := range servers {
-			log.Info("Server", "name", s.Name, "players", s.PlayerCount)
-		}
-	})
-
-	// Find a player across all servers.
-	portal.FindPlayer(uuid.Nil, "PlayerName", func(uid uuid.UUID, name string, online bool, server string) {
-		if online {
-			log.Info("Player found", "name", name, "server", server)
-		}
-	})
-
-	// Handle latency updates from the proxy.
-	portal.SetLatencyHandler(func(uid uuid.UUID, latency int64) {
-		log.Info("Player latency update", "uuid", uid, "latency_ms", latency)
-	})
+	srv.Listen()
+	for p := range srv.Accept() {
+		// handle players...
+	}
 }
+```
+
+## Commands
+
+The `command` sub-package provides ready-to-use dragonfly commands:
+
+| Command | Description |
+|---|---|
+| `/transfer <server>` | Transfer yourself to another server |
+| `/transfer <server> <player>` | Transfer another player to a server |
+| `/server` | Check which server you are on |
+| `/server <player>` | Check which server another player is on |
+| `/servers` | List all servers connected to the proxy |
+
+Register all commands with one call:
+
+```go
+import portalcmd "github.com/hexomc/portaldf/command"
+
+portalcmd.Register(portal, srv)
+```
+
+## API Usage
+
+```go
+import (
+	"github.com/google/uuid"
+	"github.com/hexomc/portaldf"
+	"github.com/hexomc/portaldf/packet"
+)
+
+// Transfer a player to another server.
+portal.TransferPlayer(playerUUID, "SkyWars1", func(uid uuid.UUID, status byte, err string) {
+	if status == packet.TransferResponseSuccess {
+		log.Info("Player transferred successfully")
+	}
+})
+
+// Get a list of all servers.
+portal.RequestServerList(func(servers []packet.ServerEntry) {
+	for _, s := range servers {
+		log.Info("Server", "name", s.Name, "players", s.PlayerCount)
+	}
+})
+
+// Find a player across all servers.
+portal.FindPlayer(uuid.Nil, "PlayerName", func(uid uuid.UUID, name string, online bool, server string) {
+	if online {
+		log.Info("Player found", "name", name, "server", server)
+	}
+})
+
+// Request player info (XUID, IP).
+portal.RequestPlayerInfo(playerUUID, func(uid uuid.UUID, status byte, xuid string, address string) {
+	log.Info("Player info", "xuid", xuid, "address", address)
+})
+
+// Handle latency updates from the proxy.
+portal.SetLatencyHandler(func(uid uuid.UUID, latency int64) {
+	log.Info("Player latency update", "uuid", uid, "latency_ms", latency)
+})
 ```
 
 ## Configuration
@@ -81,9 +131,23 @@ func main() {
 | `ServerName` | Server identifier on the proxy | `Server1` |
 | `ServerAddress` | Address for proxy to connect players to | `127.0.0.1:19132` |
 
+## Transfer Response Statuses
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `TransferResponseSuccess` | 0 | Player transferred successfully |
+| `TransferResponseServerNotFound` | 1 | Target server not found on proxy |
+| `TransferResponseAlreadyOnServer` | 2 | Player is already on that server |
+| `TransferResponsePlayerNotFound` | 3 | Player could not be found |
+| `TransferResponseError` | 4 | An error occurred (check error string) |
+
 ## Protocol
 
 This library implements the Portal proxy's binary TCP socket protocol:
 - 4-byte little-endian length prefix
 - 2-byte little-endian packet ID header
 - Payload serialized using gophertunnel's protocol.Reader/Writer
+
+## Issues
+
+If you encounter any problems, please [open an issue](https://github.com/MEMOxiiii/PortalDF/issues).

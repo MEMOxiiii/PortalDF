@@ -134,6 +134,11 @@ func (p *Portal) Connected() bool {
 	return p.connected
 }
 
+// ServerName returns the configured server name that this instance registered as on the proxy.
+func (p *Portal) ServerName() string {
+	return p.config.ServerName
+}
+
 func (p *Portal) setConnected(v bool) {
 	p.connectedMu.Lock()
 	p.connected = v
