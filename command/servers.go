@@ -7,7 +7,7 @@ import (
 	"github.com/df-mc/dragonfly/server/cmd"
 	"github.com/df-mc/dragonfly/server/player"
 	"github.com/df-mc/dragonfly/server/world"
-	"github.com/hexomc/portaldf/packet"
+	"github.com/MEMOxiiii/PortalDF/packet"
 )
 
 // Servers lists all servers connected to the proxy.

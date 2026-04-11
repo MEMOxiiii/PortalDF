@@ -5,7 +5,7 @@ import (
 	"github.com/df-mc/dragonfly/server/player"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/google/uuid"
-	"github.com/hexomc/portaldf/packet"
+	"github.com/MEMOxiiii/PortalDF/packet"
 )
 
 // TransferSelf transfers the command sender to the specified server.

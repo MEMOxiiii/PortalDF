@@ -19,7 +19,7 @@ This is the Dragonfly equivalent of [PortalPM](https://github.com/MEMOxiiii/Port
 ## Installation
 
 ```
-go get github.com/hexomc/portaldf
+go get github.com/MEMOxiiii/PortalDF
 ```
 
 ## Quick Start
@@ -31,8 +31,8 @@ import (
 	"log/slog"
 
 	"github.com/df-mc/dragonfly/server"
-	"github.com/hexomc/portaldf"
-	portalcmd "github.com/hexomc/portaldf/command"
+	"github.com/MEMOxiiii/PortalDF"
+	portalcmd "github.com/MEMOxiiii/PortalDF/command"
 )
 
 func main() {
@@ -75,7 +75,7 @@ The `command` sub-package provides ready-to-use dragonfly commands:
 Register all commands with one call:
 
 ```go
-import portalcmd "github.com/hexomc/portaldf/command"
+import portalcmd "github.com/MEMOxiiii/PortalDF/command"
 
 portalcmd.Register(portal, srv)
 ```
@@ -85,8 +85,8 @@ portalcmd.Register(portal, srv)
 ```go
 import (
 	"github.com/google/uuid"
-	"github.com/hexomc/portaldf"
-	"github.com/hexomc/portaldf/packet"
+	"github.com/MEMOxiiii/PortalDF"
+	"github.com/MEMOxiiii/PortalDF/packet"
 )
 
 // Transfer a player to another server.

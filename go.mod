@@ -1,4 +1,4 @@
-module github.com/hexomc/portaldf
+module github.com/MEMOxiiii/PortalDF
 
 go 1.24.0
 

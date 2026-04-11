@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/hexomc/portaldf/packet"
+	"github.com/MEMOxiiii/PortalDF/packet"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 )
 

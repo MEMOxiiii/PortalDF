@@ -3,7 +3,7 @@ package command
 import (
 	"github.com/df-mc/dragonfly/server"
 	"github.com/df-mc/dragonfly/server/cmd"
-	"github.com/hexomc/portaldf"
+	"github.com/MEMOxiiii/PortalDF"
 )
 
 var (
