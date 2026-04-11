@@ -2,7 +2,6 @@
 
 A Go library for connecting [Dragonfly](https://github.com/df-mc/dragonfly) servers to the [Portal](https://github.com/paroxity/portal) proxy via its socket communication protocol.
 
-This is the Dragonfly equivalent of [PortalPM](https://github.com/MEMOxiiii/PortalPM) for PocketMine-MP.
 
 ## Features
 
