@@ -1,11 +1,11 @@
 package command
 
 import (
+	"github.com/MEMOxiiii/PortalDF/packet"
 	"github.com/df-mc/dragonfly/server/cmd"
 	"github.com/df-mc/dragonfly/server/player"
 	"github.com/df-mc/dragonfly/server/world"
 	"github.com/google/uuid"
-	"github.com/MEMOxiiii/PortalDF/packet"
 )
 
 // TransferSelf transfers the command sender to the specified server.

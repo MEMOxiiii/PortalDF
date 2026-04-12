@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/MEMOxiiii/PortalDF/packet"
+	"github.com/google/uuid"
 	"github.com/sandertv/gophertunnel/minecraft/protocol"
 )
 
@@ -299,7 +299,8 @@ func (p *Portal) handleAuthResponse(pk *packet.AuthResponse) {
 
 	// Register our server address with the proxy.
 	if err := p.writePacket(&packet.RegisterServer{
-		Address: p.config.ServerAddress,
+		Address:    p.config.ServerAddress,
+		LegacyAuth: false,
 	}); err != nil {
 		p.log.Error("Failed to send register server packet", "error", err)
 	} else {

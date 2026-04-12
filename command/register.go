@@ -1,9 +1,9 @@
 package command
 
 import (
+	portaldf "github.com/MEMOxiiii/PortalDF"
 	"github.com/df-mc/dragonfly/server"
 	"github.com/df-mc/dragonfly/server/cmd"
-	"github.com/MEMOxiiii/PortalDF"
 )
 
 var (
