@@ -12,6 +12,9 @@ A Go library for connecting [Dragonfly](https://github.com/df-mc/dragonfly) serv
 - List all connected servers with player counts
 - Find which server a player is on
 - Receive player latency updates from the proxy
+- Register with a load-balancer group and weight
+- Disconnect stale local sessions when the proxy is about to transfer a player here
+- Mark this server as draining so the proxy stops routing new players to it
 - Automatic reconnection on disconnect
 - **Built-in dragonfly commands**: `/transfer`, `/server`, `/servers`
 
@@ -118,6 +121,17 @@ portal.RequestPlayerInfo(playerUUID, func(uid uuid.UUID, status byte, xuid strin
 portal.SetLatencyHandler(func(uid uuid.UUID, latency int64) {
 	log.Info("Player latency update", "uuid", uid, "latency_ms", latency)
 })
+
+// Handle requests from the proxy to disconnect a stale local session before a transfer.
+// This is wired up automatically by portalcmd.Register, so you only need this if you're
+// not using the command package.
+portal.SetDisconnectPlayerHandler(func(playerName string) {
+	log.Info("Disconnecting stale session", "player", playerName)
+})
+
+// Mark this server as draining (e.g. before a planned restart) so the proxy's load
+// balancers stop routing new players to it. Already-connected players are unaffected.
+portal.SetDraining(true)
 ```
 
 ## Configuration
@@ -129,6 +143,8 @@ portal.SetLatencyHandler(func(uid uuid.UUID, latency int64) {
 | `Secret` | Authentication secret (must match proxy) | `""` |
 | `ServerName` | Server identifier on the proxy | `Server1` |
 | `ServerAddress` | Address for proxy to connect players to | `127.0.0.1:19132` |
+| `Group` | Load-balancer group this server belongs to | `""` (no group) |
+| `Weight` | Share of new players relative to others in the group | `0` (treated as `1`) |
 
 ## Transfer Response Statuses
 

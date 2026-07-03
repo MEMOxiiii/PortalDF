@@ -31,6 +31,11 @@ type FindPlayerCallback func(playerUUID uuid.UUID, playerName string, online boo
 // LatencyHandler is called when the proxy sends a player latency update.
 type LatencyHandler func(playerUUID uuid.UUID, latency int64)
 
+// DisconnectPlayerHandler is called when the proxy asks this server to disconnect any existing session for
+// the named player, because the player is about to be transferred here and may have a stale session left
+// over from a previous connection.
+type DisconnectPlayerHandler func(playerName string)
+
 // Portal represents a connection to a Portal proxy's socket server.
 // It handles authentication, server registration, and provides methods
 // for transferring players and querying information from the proxy.
@@ -61,6 +66,9 @@ type Portal struct {
 
 	latencyHandler LatencyHandler
 	latencyMu      sync.RWMutex
+
+	disconnectPlayerHandler DisconnectPlayerHandler
+	disconnectPlayerMu      sync.RWMutex
 
 	connected   bool
 	connectedMu sync.RWMutex
@@ -210,6 +218,20 @@ func (p *Portal) SetLatencyHandler(handler LatencyHandler) {
 	p.latencyMu.Unlock()
 }
 
+// SetDisconnectPlayerHandler sets the handler that will be called when the proxy asks this server to
+// disconnect a stale session for a player about to be transferred here.
+func (p *Portal) SetDisconnectPlayerHandler(handler DisconnectPlayerHandler) {
+	p.disconnectPlayerMu.Lock()
+	p.disconnectPlayerHandler = handler
+	p.disconnectPlayerMu.Unlock()
+}
+
+// SetDraining tells the proxy whether load balancers should stop routing new players to this server.
+// Players already connected are unaffected. Typically sent before a planned restart or deployment.
+func (p *Portal) SetDraining(draining bool) error {
+	return p.writePacket(&packet.SetServerDraining{Draining: draining})
+}
+
 // connectOnce establishes a single connection to the proxy, authenticates, registers, and enters the read loop.
 func (p *Portal) connectOnce() error {
 	address := net.JoinHostPort(p.config.ProxyAddress, fmt.Sprintf("%d", p.config.SocketPort))
@@ -272,6 +294,8 @@ func (p *Portal) handlePacket(pk packet.Packet) {
 		p.handleFindPlayerResponse(pk)
 	case *packet.UpdatePlayerLatency:
 		p.handleUpdatePlayerLatency(pk)
+	case *packet.DisconnectPlayer:
+		p.handleDisconnectPlayer(pk)
 	}
 }
 
@@ -301,6 +325,8 @@ func (p *Portal) handleAuthResponse(pk *packet.AuthResponse) {
 	if err := p.writePacket(&packet.RegisterServer{
 		Address:    p.config.ServerAddress,
 		LegacyAuth: false,
+		Group:      p.config.Group,
+		Weight:     p.config.Weight,
 	}); err != nil {
 		p.log.Error("Failed to send register server packet", "error", err)
 	} else {
@@ -376,6 +402,16 @@ func (p *Portal) handleUpdatePlayerLatency(pk *packet.UpdatePlayerLatency) {
 
 	if handler != nil {
 		handler(pk.PlayerUUID, pk.Latency)
+	}
+}
+
+func (p *Portal) handleDisconnectPlayer(pk *packet.DisconnectPlayer) {
+	p.disconnectPlayerMu.RLock()
+	handler := p.disconnectPlayerHandler
+	p.disconnectPlayerMu.RUnlock()
+
+	if handler != nil {
+		handler(pk.PlayerName)
 	}
 }
 

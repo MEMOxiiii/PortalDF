@@ -18,5 +18,7 @@ func NewPool() Pool {
 		IDFindPlayerRequest:   &FindPlayerRequest{},
 		IDFindPlayerResponse:  &FindPlayerResponse{},
 		IDUpdatePlayerLatency: &UpdatePlayerLatency{},
+		IDDisconnectPlayer:    &DisconnectPlayer{},
+		IDSetServerDraining:   &SetServerDraining{},
 	}
 }

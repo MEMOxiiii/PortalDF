@@ -1,7 +1,7 @@
 package packet
 
 // ProtocolVersion is the protocol version supported by the proxy. It must match the proxy's version.
-const ProtocolVersion = 1
+const ProtocolVersion = 2
 
 const (
 	IDAuthRequest uint16 = iota
@@ -16,4 +16,6 @@ const (
 	IDFindPlayerRequest
 	IDFindPlayerResponse
 	IDUpdatePlayerLatency
+	IDDisconnectPlayer
+	IDSetServerDraining
 )
