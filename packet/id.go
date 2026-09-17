@@ -1,7 +1,9 @@
 package packet
 
 // ProtocolVersion is the protocol version supported by the proxy. It must match the proxy's version.
-const ProtocolVersion = 2
+//
+// v3 added the Transport field to RegisterServer.
+const ProtocolVersion = 3
 
 const (
 	IDAuthRequest uint16 = iota

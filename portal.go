@@ -321,9 +321,15 @@ func (p *Portal) handleAuthResponse(pk *packet.AuthResponse) {
 	p.log.Info("Authenticated with Portal proxy")
 	p.setConnected(true)
 
+	transport := p.config.Transport
+	if transport == "" {
+		transport = TransportRakNet
+	}
+
 	// Register our server address with the proxy.
 	if err := p.writePacket(&packet.RegisterServer{
 		Address:    p.config.ServerAddress,
+		Transport:  string(transport),
 		LegacyAuth: false,
 		Group:      p.config.Group,
 		Weight:     p.config.Weight,

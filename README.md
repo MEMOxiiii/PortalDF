@@ -183,7 +183,8 @@ portal.SetDraining(true)
 | `SocketPort` | Communication socket port | `19131` |
 | `Secret` | Authentication secret (must match proxy) | `""` |
 | `ServerName` | Server identifier on the proxy | `Server1` |
-| `ServerAddress` | Address for proxy to connect players to | `127.0.0.1:19132` |
+| `ServerAddress` | Address for proxy to connect players to. Format depends on `Transport`: a `"host:port"` pair for `TransportRakNet`, or the URL of this server's HTTP(S) NetherNet signaling endpoint for `TransportNetherNet` | `127.0.0.1:19132` |
+| `Transport` | Network transport the proxy dials this server with: `portaldf.TransportRakNet` or `portaldf.TransportNetherNet` | `TransportRakNet` |
 | `Group` | Load-balancer group this server belongs to | `""` (no group) |
 | `Weight` | Share of new players relative to others in the group | `0` (treated as `1`) |
 
