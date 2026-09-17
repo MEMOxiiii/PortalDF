@@ -184,9 +184,50 @@ portal.SetDraining(true)
 | `Secret` | Authentication secret (must match proxy) | `""` |
 | `ServerName` | Server identifier on the proxy | `Server1` |
 | `ServerAddress` | Address for proxy to connect players to. Format depends on `Transport`: a `"host:port"` pair for `TransportRakNet`, or the URL of this server's HTTP(S) NetherNet signaling endpoint for `TransportNetherNet` | `127.0.0.1:19132` |
-| `Transport` | Network transport the proxy dials this server with: `portaldf.TransportRakNet` or `portaldf.TransportNetherNet` | `TransportRakNet` |
+| `Transport` | Network transport the proxy dials this server with: `portaldf.TransportRakNet` or `portaldf.TransportNetherNet`. See [Matching Transport with Dragonfly's own listener config](#matching-transport-with-dragonflys-own-listener-config) — this must be kept in sync with `config.toml` by hand | `TransportRakNet` |
 | `Group` | Load-balancer group this server belongs to | `""` (no group) |
 | `Weight` | Share of new players relative to others in the group | `0` (treated as `1`) |
+
+## Matching Transport with Dragonfly's own listener config
+
+`Transport` and `ServerAddress` only tell the **proxy** how to reach this server — they do **not** read
+Dragonfly's `config.toml`, and Dragonfly does **not** read them either. These are two independent config
+files that you must keep in sync by hand:
+
+1. **Dragonfly's `config.toml`** decides which transport(s) Dragonfly itself actually listens on.
+2. **PortalDF's `Config.Transport` / `Config.ServerAddress`** decide what the proxy is told to dial.
+
+If the two disagree — say, `config.toml` only starts a RakNet listener but PortalDF is told
+`TransportNetherNet` — nothing errors at startup. The proxy will simply try to reach an endpoint that isn't
+there, and its health check will silently mark this server unhealthy.
+
+**Side-by-side example for one Dragonfly instance running NetherNet only:**
+
+`config.toml` (Dragonfly):
+```toml
+[Network]
+  Address = ":19132"
+  Transport = ["nethernet"]      # or ["raknet"], or both: ["raknet", "nethernet"]
+  [Network.NetherNet]
+    Address = ""                 # "" reuses Network.Address (TCP; doesn't collide with RakNet's UDP)
+    UDPPorts = "19133"
+```
+
+`main.go` (this server's PortalDF setup):
+```go
+portaldf.Enable(srv, portaldf.Config{
+	ProxyAddress:  "127.0.0.1",
+	SocketPort:    19131,
+	Secret:        "your-secret",
+	ServerName:    "Hub2",
+	ServerAddress: "http://127.0.0.1:19132", // URL, matching Network(.NetherNet).Address above — not host:port
+	Transport:     portaldf.TransportNetherNet,
+})
+```
+
+Every Dragonfly instance behind the same proxy is configured independently this way, so a RakNet-only
+server and a NetherNet-only server (or one running both) can sit side by side on the same proxy without any
+proxy-side configuration at all — the proxy learns each server's transport from its `RegisterServer` call.
 
 ## Transfer Response Statuses
 
