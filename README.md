@@ -1,22 +1,18 @@
 # PortalDF
 
-A Go library for connecting [Dragonfly](https://github.com/df-mc/dragonfly) servers to the [Portal](https://github.com/paroxity/portal) proxy via its socket communication protocol.
+A Go library for connecting [Dragonfly](https://github.com/df-mc/dragonfly) servers to the [Portal](https://github.com/MEMOxiiii/portal) proxy via its socket communication protocol.
 
+📖 **[Full documentation is in the Wiki](https://github.com/MEMOxiiii/PortalDF/wiki)**
+
+---
 
 ## Features
 
-- Connects to the Portal proxy via TCP socket
-- Automatic authentication and server registration
-- Transfer players between servers
-- Query player information (XUID, IP address)
-- List all connected servers with player counts
-- Find which server a player is on
-- Receive player latency updates from the proxy
-- Register with a load-balancer group and weight
-- Disconnect stale local sessions when the proxy is about to transfer a player here
-- Mark this server as draining so the proxy stops routing new players to it
-- Automatic reconnection on disconnect
-- **Built-in dragonfly commands**: `/transfer`, `/server`, `/servers`
+- Connects to the Portal proxy via TCP socket, with automatic reconnection
+- Transfer players, query player info, list servers, find a player anywhere on the network
+- Player latency reporting, stale-session cleanup, and draining
+- Built-in Dragonfly commands: `/transfer`, `/server`, `/servers`
+- Works over RakNet or NetherNet, chosen per server
 
 ## Installation
 
@@ -26,8 +22,7 @@ go get github.com/MEMOxiiii/PortalDF
 
 ## Quick Start
 
-`Enable` connects to the proxy, registers `/transfer`, `/server` and `/servers`, and wires up stale-session
-cleanup — all in a single call:
+`Enable` connects to the proxy and registers the built-in commands in a single call:
 
 ```go
 package main
@@ -57,194 +52,7 @@ func main() {
 }
 ```
 
-`Enable` returns the `*Portal` client, so you can still call any of its methods (`TransferPlayer`,
-`SetLatencyHandler`, `SetDraining`, etc. — see [API Usage](#api-usage)) on the result if you need more than
-the built-in commands. Use `EnableWithLogger` instead of `Enable` to log through your own `*slog.Logger`.
-
-### Manual setup
-
-If you'd rather manage the connection and command registration yourself (for example, to skip the built-in
-commands), wire them up individually:
-
-```go
-package main
-
-import (
-	"log/slog"
-
-	"github.com/MEMOxiiii/PortalDF"
-	portalcmd "github.com/MEMOxiiii/PortalDF/command"
-	"github.com/df-mc/dragonfly/server"
-)
-
-func main() {
-	// ... set up dragonfly server config ...
-	srv := conf.New()
-	srv.CloseOnProgramEnd()
-
-	portal := portaldf.New(portaldf.Config{
-		ProxyAddress:  "127.0.0.1",
-		SocketPort:    19131,
-		Secret:        "your-secret",
-		ServerName:    "Hub1",
-		ServerAddress: "127.0.0.1:19132",
-	}, slog.Default())
-
-	go portal.Connect()
-
-	// Register /transfer, /server, /servers commands.
-	portalcmd.Register(portal, srv)
-
-	srv.Listen()
-	for p := range srv.Accept() {
-		// handle players...
-	}
-}
-```
-
-## Commands
-
-The `command` sub-package provides ready-to-use dragonfly commands:
-
-| Command | Description |
-|---|---|
-| `/transfer <server>` | Transfer yourself to another server |
-| `/transfer <server> <player>` | Transfer another player to a server |
-| `/server` | Check which server you are on |
-| `/server <player>` | Check which server another player is on |
-| `/servers` | List all servers connected to the proxy |
-
-`portaldf.Enable` (see [Quick Start](#quick-start)) registers these for you. If you're wiring things up
-manually instead, register all commands with one call:
-
-```go
-import portalcmd "github.com/MEMOxiiii/PortalDF/command"
-
-portalcmd.Register(portal, srv)
-```
-
-## API Usage
-
-```go
-import (
-	"github.com/google/uuid"
-	"github.com/MEMOxiiii/PortalDF"
-	"github.com/MEMOxiiii/PortalDF/packet"
-)
-
-// Transfer a player to another server.
-portal.TransferPlayer(playerUUID, "SkyWars1", func(uid uuid.UUID, status byte, err string) {
-	if status == packet.TransferResponseSuccess {
-		log.Info("Player transferred successfully")
-	}
-})
-
-// Get a list of all servers.
-portal.RequestServerList(func(servers []packet.ServerEntry) {
-	for _, s := range servers {
-		log.Info("Server", "name", s.Name, "players", s.PlayerCount)
-	}
-})
-
-// Find a player across all servers.
-portal.FindPlayer(uuid.Nil, "PlayerName", func(uid uuid.UUID, name string, online bool, server string) {
-	if online {
-		log.Info("Player found", "name", name, "server", server)
-	}
-})
-
-// Request player info (XUID, IP).
-portal.RequestPlayerInfo(playerUUID, func(uid uuid.UUID, status byte, xuid string, address string) {
-	log.Info("Player info", "xuid", xuid, "address", address)
-})
-
-// Handle latency updates from the proxy.
-portal.SetLatencyHandler(func(uid uuid.UUID, latency int64) {
-	log.Info("Player latency update", "uuid", uid, "latency_ms", latency)
-})
-
-// Handle requests from the proxy to disconnect a stale local session before a transfer.
-// This is wired up automatically by portalcmd.Register, so you only need this if you're
-// not using the command package.
-portal.SetDisconnectPlayerHandler(func(playerName string) {
-	log.Info("Disconnecting stale session", "player", playerName)
-})
-
-// Mark this server as draining (e.g. before a planned restart) so the proxy's load
-// balancers stop routing new players to it. Already-connected players are unaffected.
-portal.SetDraining(true)
-```
-
-## Configuration
-
-| Field | Description | Default |
-|---|---|---|
-| `ProxyAddress` | IP address of the Portal proxy | `127.0.0.1` |
-| `SocketPort` | Communication socket port | `19131` |
-| `Secret` | Authentication secret (must match proxy) | `""` |
-| `ServerName` | Server identifier on the proxy | `Server1` |
-| `ServerAddress` | Address for proxy to connect players to. Format depends on `Transport`: a `"host:port"` pair for `TransportRakNet`, or the URL of this server's HTTP(S) NetherNet signaling endpoint for `TransportNetherNet` | `127.0.0.1:19132` |
-| `Transport` | Network transport the proxy dials this server with: `portaldf.TransportRakNet` or `portaldf.TransportNetherNet`. See [Matching Transport with Dragonfly's own listener config](#matching-transport-with-dragonflys-own-listener-config) — this must be kept in sync with `config.toml` by hand | `TransportRakNet` |
-| `Group` | Load-balancer group this server belongs to | `""` (no group) |
-| `Weight` | Share of new players relative to others in the group | `0` (treated as `1`) |
-
-## Matching Transport with Dragonfly's own listener config
-
-`Transport` and `ServerAddress` only tell the **proxy** how to reach this server — they do **not** read
-Dragonfly's `config.toml`, and Dragonfly does **not** read them either. These are two independent config
-files that you must keep in sync by hand:
-
-1. **Dragonfly's `config.toml`** decides which transport(s) Dragonfly itself actually listens on.
-2. **PortalDF's `Config.Transport` / `Config.ServerAddress`** decide what the proxy is told to dial.
-
-If the two disagree — say, `config.toml` only starts a RakNet listener but PortalDF is told
-`TransportNetherNet` — nothing errors at startup. The proxy will simply try to reach an endpoint that isn't
-there, and its health check will silently mark this server unhealthy.
-
-**Side-by-side example for one Dragonfly instance running NetherNet only:**
-
-`config.toml` (Dragonfly):
-```toml
-[Network]
-  Address = ":19132"
-  Transport = ["nethernet"]      # or ["raknet"], or both: ["raknet", "nethernet"]
-  [Network.NetherNet]
-    Address = ""                 # "" reuses Network.Address (TCP; doesn't collide with RakNet's UDP)
-    UDPPorts = "19133"
-```
-
-`main.go` (this server's PortalDF setup):
-```go
-portaldf.Enable(srv, portaldf.Config{
-	ProxyAddress:  "127.0.0.1",
-	SocketPort:    19131,
-	Secret:        "your-secret",
-	ServerName:    "Hub2",
-	ServerAddress: "http://127.0.0.1:19132", // URL, matching Network(.NetherNet).Address above — not host:port
-	Transport:     portaldf.TransportNetherNet,
-})
-```
-
-Every Dragonfly instance behind the same proxy is configured independently this way, so a RakNet-only
-server and a NetherNet-only server (or one running both) can sit side by side on the same proxy without any
-proxy-side configuration at all — the proxy learns each server's transport from its `RegisterServer` call.
-
-## Transfer Response Statuses
-
-| Constant | Value | Meaning |
-|---|---|---|
-| `TransferResponseSuccess` | 0 | Player transferred successfully |
-| `TransferResponseServerNotFound` | 1 | Target server not found on proxy |
-| `TransferResponseAlreadyOnServer` | 2 | Player is already on that server |
-| `TransferResponsePlayerNotFound` | 3 | Player could not be found |
-| `TransferResponseError` | 4 | An error occurred (check error string) |
-
-## Protocol
-
-This library implements the Portal proxy's binary TCP socket protocol:
-- 4-byte little-endian length prefix
-- 2-byte little-endian packet ID header
-- Payload serialized using gophertunnel's protocol.Reader/Writer
+See the [Wiki](https://github.com/MEMOxiiii/PortalDF/wiki) for every `Config` field, manual (non-`Enable`) setup, running over NetherNet, the full API (`TransferPlayer`, `FindPlayer`, `SetDraining`, etc.), and the commands this registers.
 
 ## Issues
 
