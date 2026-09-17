@@ -12,8 +12,7 @@ const (
 	// TransportRakNet is the classic UDP transport. ServerAddress must be a "host:port" pair.
 	TransportRakNet Transport = "raknet"
 	// TransportNetherNet is Bedrock's WebRTC-based transport. ServerAddress must be the URL of this
-	// server's HTTP(S) signaling endpoint (e.g. "http://127.0.0.1:19132"), matching whatever address
-	// Dragonfly's own NetherNet listener is bound to.
+	// server's HTTP(S) signaling endpoint (e.g. "http://127.0.0.1:19132").
 	TransportNetherNet Transport = "nethernet"
 )
 
@@ -27,20 +26,15 @@ type Config struct {
 	Secret string
 	// ServerName is the name this server will be identified as on the proxy (e.g. "Hub1", "SkyWars1").
 	ServerName string
-	// ServerAddress is the address of this server that the proxy should connect players to. Its format
-	// depends on Transport: for TransportRakNet it is a "host:port" pair (e.g. "127.0.0.1:19132"); for
-	// TransportNetherNet it is the URL of this server's HTTP(S) signaling endpoint.
+	// ServerAddress is this server's own address, in the format Transport requires (see its docs).
 	ServerAddress string
-	// Transport is the network transport the proxy should use to dial this server. If empty,
-	// TransportRakNet is used, matching every server registered before this field existed.
+	// Transport is the network transport the proxy should use to dial this server. Empty means
+	// TransportRakNet.
 	Transport Transport
-	// Group is the name of the group this server belongs to, used by group-aware load balancers on the
-	// proxy to route players to the correct set of servers. Leave empty if the server does not belong to
-	// a group.
+	// Group is the load-balancer group this server belongs to. Leave empty for no group.
 	Group string
-	// Weight controls how large a share of new players this server should receive relative to others in
-	// the same group. A weight of 0 is treated by the proxy as 1, giving all servers in a group without an
-	// explicit weight an even split.
+	// Weight controls how large a share of new players this server gets relative to others in Group. 0 is
+	// treated as 1 (an even split).
 	Weight uint32
 }
 
@@ -56,11 +50,7 @@ func DefaultConfig() Config {
 	}
 }
 
-// validate checks that ServerAddress is well-formed for Transport, catching the most common
-// misconfiguration -- a "host:port" pair left over from TransportRakNet after switching Transport to
-// TransportNetherNet without updating ServerAddress to match -- locally, instead of it being silently
-// rejected by the proxy with a confusing URL-parse error minutes later, deep inside a health check or a
-// player transfer.
+// validate checks ServerAddress is well-formed for Transport locally, before ever contacting the proxy.
 func (c Config) validate() error {
 	transport := c.Transport
 	if transport == "" {
@@ -78,6 +68,12 @@ func (c Config) validate() error {
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return fmt.Errorf("ServerAddress must use the \"http\" or \"https\" scheme for TransportNetherNet, got %q", c.ServerAddress)
+	}
+	if u.Port() == "" {
+		return fmt.Errorf("ServerAddress must include an explicit port, got %q", c.ServerAddress)
+	}
+	if u.Path != "" {
+		return fmt.Errorf("ServerAddress must not have a path, got %q", c.ServerAddress)
 	}
 	return nil
 }

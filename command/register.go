@@ -9,9 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// portalClient is the subset of *portaldf.Portal used by these commands. It is declared here instead of
-// depending on the root package directly, so that the root package can register these commands from a
-// single Enable call without creating an import cycle (the root package already needs to import this one).
+// portalClient is the subset of *portaldf.Portal used here, declared locally to avoid an import cycle with
+// the root package (which imports this one from Enable).
 type portalClient interface {
 	ServerName() string
 	Connected() bool

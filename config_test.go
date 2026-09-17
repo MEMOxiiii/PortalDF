@@ -25,6 +25,16 @@ func TestConfigValidate(t *testing.T) {
 			config:  Config{Transport: TransportNetherNet},
 			wantErr: true,
 		},
+		{
+			name:    "nethernet missing port",
+			config:  Config{ServerAddress: "http://127.0.0.1", Transport: TransportNetherNet},
+			wantErr: true,
+		},
+		{
+			name:    "nethernet has a path",
+			config:  Config{ServerAddress: "http://127.0.0.1:19133/nethernet", Transport: TransportNetherNet},
+			wantErr: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

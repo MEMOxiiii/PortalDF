@@ -7,13 +7,8 @@ import (
 	"github.com/df-mc/dragonfly/server"
 )
 
-// Enable connects srv to a Portal proxy using config and registers the /transfer, /server and /servers
-// commands, along with stale-session cleanup for players the proxy transfers in. The connection and its
-// automatic reconnect loop run in the background; call Close on the returned Portal to stop them.
-//
-// It is the fastest way to wire a Dragonfly server up to a Portal proxy:
-//
-//	portaldf.Enable(srv, portaldf.DefaultConfig())
+// Enable connects srv to a Portal proxy and registers /transfer, /server and /servers, running in the
+// background. Call Close on the returned Portal to stop it.
 func Enable(srv *server.Server, config Config) *Portal {
 	return EnableWithLogger(srv, config, nil)
 }
