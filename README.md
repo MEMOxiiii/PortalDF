@@ -26,15 +26,55 @@ go get github.com/MEMOxiiii/PortalDF
 
 ## Quick Start
 
+`Enable` connects to the proxy, registers `/transfer`, `/server` and `/servers`, and wires up stale-session
+cleanup — all in a single call:
+
+```go
+package main
+
+import (
+	"github.com/MEMOxiiii/PortalDF"
+	"github.com/df-mc/dragonfly/server"
+)
+
+func main() {
+	// ... set up dragonfly server config ...
+	srv := conf.New()
+	srv.CloseOnProgramEnd()
+	srv.Listen()
+
+	portaldf.Enable(srv, portaldf.Config{
+		ProxyAddress:  "127.0.0.1",
+		SocketPort:    19131,
+		Secret:        "your-secret",
+		ServerName:    "Hub1",
+		ServerAddress: "127.0.0.1:19132",
+	})
+
+	for p := range srv.Accept() {
+		// handle players...
+	}
+}
+```
+
+`Enable` returns the `*Portal` client, so you can still call any of its methods (`TransferPlayer`,
+`SetLatencyHandler`, `SetDraining`, etc. — see [API Usage](#api-usage)) on the result if you need more than
+the built-in commands. Use `EnableWithLogger` instead of `Enable` to log through your own `*slog.Logger`.
+
+### Manual setup
+
+If you'd rather manage the connection and command registration yourself (for example, to skip the built-in
+commands), wire them up individually:
+
 ```go
 package main
 
 import (
 	"log/slog"
 
-	"github.com/df-mc/dragonfly/server"
 	"github.com/MEMOxiiii/PortalDF"
 	portalcmd "github.com/MEMOxiiii/PortalDF/command"
+	"github.com/df-mc/dragonfly/server"
 )
 
 func main() {
@@ -74,7 +114,8 @@ The `command` sub-package provides ready-to-use dragonfly commands:
 | `/server <player>` | Check which server another player is on |
 | `/servers` | List all servers connected to the proxy |
 
-Register all commands with one call:
+`portaldf.Enable` (see [Quick Start](#quick-start)) registers these for you. If you're wiring things up
+manually instead, register all commands with one call:
 
 ```go
 import portalcmd "github.com/MEMOxiiii/PortalDF/command"

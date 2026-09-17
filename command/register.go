@@ -1,21 +1,34 @@
 package command
 
 import (
-	portaldf "github.com/MEMOxiiii/PortalDF"
+	"github.com/MEMOxiiii/PortalDF/packet"
 	"github.com/df-mc/dragonfly/server"
 	"github.com/df-mc/dragonfly/server/cmd"
 	"github.com/df-mc/dragonfly/server/player"
 	"github.com/df-mc/dragonfly/server/world"
+	"github.com/google/uuid"
 )
 
+// portalClient is the subset of *portaldf.Portal used by these commands. It is declared here instead of
+// depending on the root package directly, so that the root package can register these commands from a
+// single Enable call without creating an import cycle (the root package already needs to import this one).
+type portalClient interface {
+	ServerName() string
+	Connected() bool
+	FindPlayer(playerUUID uuid.UUID, playerName string, callback packet.FindPlayerCallback) error
+	RequestServerList(callback packet.ServerListCallback) error
+	TransferPlayer(playerUUID uuid.UUID, server string, callback packet.TransferCallback) error
+	SetDisconnectPlayerHandler(handler packet.DisconnectPlayerHandler)
+}
+
 var (
-	portalRef *portaldf.Portal
+	portalRef portalClient
 	serverRef *server.Server
 )
 
 // Register registers all Portal commands with the dragonfly command system.
 // It requires a connected Portal instance and the dragonfly Server for player lookups.
-func Register(p *portaldf.Portal, srv *server.Server) {
+func Register(p portalClient, srv *server.Server) {
 	portalRef = p
 	serverRef = srv
 
