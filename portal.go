@@ -234,6 +234,10 @@ func (p *Portal) SetDraining(draining bool) error {
 
 // connectOnce establishes a single connection to the proxy, authenticates, registers, and enters the read loop.
 func (p *Portal) connectOnce() error {
+	if err := p.config.validate(); err != nil {
+		return fmt.Errorf("invalid configuration, not connecting: %w", err)
+	}
+
 	address := net.JoinHostPort(p.config.ProxyAddress, fmt.Sprintf("%d", p.config.SocketPort))
 	p.log.Info("Connecting to Portal proxy", "address", address)
 

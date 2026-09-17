@@ -1,5 +1,10 @@
 package portaldf
 
+import (
+	"fmt"
+	"net/url"
+)
+
 // Transport identifies the network transport the proxy should use to dial this server.
 type Transport string
 
@@ -49,4 +54,30 @@ func DefaultConfig() Config {
 		ServerAddress: "127.0.0.1:19132",
 		Transport:     TransportRakNet,
 	}
+}
+
+// validate checks that ServerAddress is well-formed for Transport, catching the most common
+// misconfiguration -- a "host:port" pair left over from TransportRakNet after switching Transport to
+// TransportNetherNet without updating ServerAddress to match -- locally, instead of it being silently
+// rejected by the proxy with a confusing URL-parse error minutes later, deep inside a health check or a
+// player transfer.
+func (c Config) validate() error {
+	transport := c.Transport
+	if transport == "" {
+		transport = TransportRakNet
+	}
+	if c.ServerAddress == "" {
+		return fmt.Errorf("ServerAddress must not be empty")
+	}
+	if transport != TransportNetherNet {
+		return nil
+	}
+	u, err := url.Parse(c.ServerAddress)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return fmt.Errorf("ServerAddress must be the full URL of this server's NetherNet signaling endpoint (e.g. %q), got %q", "http://host:port", c.ServerAddress)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("ServerAddress must use the \"http\" or \"https\" scheme for TransportNetherNet, got %q", c.ServerAddress)
+	}
+	return nil
 }
