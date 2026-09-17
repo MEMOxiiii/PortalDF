@@ -77,7 +77,7 @@ func (c TransferOther) Run(src cmd.Source, o *cmd.Output, tx *world.Tx) {
 	if serverRef != nil {
 		if handle, found := serverRef.PlayerByName(targetName); found {
 			var targetUUID uuid.UUID
-			handle.ExecWorld(func(tx *world.Tx, e world.Entity) {
+			handle.Do(func(tx *world.Tx, e world.Entity) {
 				if tp, ok := e.(*player.Player); ok {
 					targetUUID = tp.UUID()
 				}

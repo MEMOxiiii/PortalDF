@@ -46,7 +46,7 @@ func Register(p portalClient, srv *server.Server) {
 		if !ok {
 			return
 		}
-		handle.ExecWorld(func(tx *world.Tx, e world.Entity) {
+		handle.Do(func(tx *world.Tx, e world.Entity) {
 			if pl, ok := e.(*player.Player); ok {
 				pl.Disconnect("Connecting from another location")
 			}

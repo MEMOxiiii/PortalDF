@@ -16,7 +16,7 @@ func sendToPlayer(uid uuid.UUID, msg string) {
 	if !ok {
 		return
 	}
-	handle.ExecWorld(func(tx *world.Tx, e world.Entity) {
+	handle.Do(func(tx *world.Tx, e world.Entity) {
 		if p, ok := e.(*player.Player); ok {
 			p.Message(msg)
 		}
